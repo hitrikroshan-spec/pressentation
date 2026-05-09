@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Visionneuse Faso - Firebase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; overflow: hidden; -webkit-user-select: none; user-select: none; }
+        .iphone-container { width: 100%; max-width: 414px; background: #000; height: 100vh; position: relative; overflow: hidden; }
+        .filter-bar { position: absolute; top: 100px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; z-index: 40; transition: opacity 0.3s; }
+        .btn-filter { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 15px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(10px); }
+        .btn-filter.active { background: #6c5ce7; border-color: #6c5ce7; }
+        .gallery-wrapper { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .gallery-wrapper::-webkit-scrollbar { display: none; }
+        .photo-slide { min-width: 100%; height: 100%; position: relative; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; background: #000; }
+        .photo-slide img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 30; background: rgba(255,255,255,0.1); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .btn-prev { left: 10px; } .btn-next { right: 10px; }
+        .overlay-info { position: absolute; top: 0; left: 0; right: 0; padding: 40px 20px 60px; z-index: 20; color: white; background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%); transition: opacity 0.3s ease; }
+        .photo-title { font-weight: 600; font-size: 1.2rem; }
+        .photo-date { font-size: 0.75rem; opacity: 0.8; }
+        .hide-ui .overlay-info, .hide-ui .nav-btn, .hide-ui .filter-bar { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div class="iphone-container" id="mainFrame">
+    <div class="filter-bar">
+        <button class="btn-filter active" onclick="filterGallery('TOUT', this)">TOUT</button>
+        <button class="btn-filter" onclick="filterGallery('RECITATION', this)">RECITATION</button>
+        <button class="btn-filter" onclick="filterGallery('CHANT', this)">CHANT</button>
+    </div>
+
+    <button class="nav-btn btn-prev" onclick="moveSlide(-1)">❮</button>
+    <button class="nav-btn btn-next" onclick="moveSlide(1)">❯</button>
+
+    <div class="gallery-wrapper" id="galleryArea"></div>
+</div>
+
+<script>
+    // CONFIGURATION FIREBASE
+    const firebaseConfig = {
+        databaseURL: "https://presentation-c55d7-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const wrapper = document.getElementById('galleryArea');
+    let currentFilter = 'TOUT';
+    let allPhotosData = [];
+
+    // Écoute des données Firebase en temps réel
+    db.ref('galeriePhotos').on('value', (snapshot) => {
+        const data = snapshot.val();
+        allPhotosData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+        displayGallery();
+    });
+
+    function displayGallery() {
+        const filtered = currentFilter === 'TOUT' 
+            ? allPhotosData 
+            : allPhotosData.filter(p => p.categorie === currentFilter);
+
+        if (filtered.length === 0) {
+            wrapper.innerHTML = `<div style="color:#444; width:100%; text-align:center; margin-top:45vh;">Aucun contenu</div>`;
+            return;
+        }
+
+        wrapper.innerHTML = filtered.reverse().map(p => `
+            <div class="photo-slide" onclick="toggleUI()">
+                <img src="${p.src}" alt="photo">
+                <div class="overlay-info">
+                    <div style="font-size:0.6rem; text-transform:uppercase; color:#6c5ce7; font-weight:bold; margin-bottom:5px;">${p.categorie}</div>
+                    <div class="photo-title">${p.titre}</div>
+                    <div class="photo-date">Ajoutée le ${p.date}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filterGallery(cat, btn) {
+        currentFilter = cat;
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        displayGallery();
+        wrapper.scrollLeft = 0;
+    }
+
+    function moveSlide(direction) {
+        wrapper.scrollBy({ left: direction * wrapper.clientWidth, behavior: 'smooth' });
+    }
+
+    function toggleUI() {
+        document.getElementById('mainFrame').classList.toggle('hide-ui');
+    }
+</script>
+</body>
+</html>
