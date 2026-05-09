@@ -10,7 +10,7 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; overflow: hidden; -webkit-user-select: none; user-select: none; }
+        body { background: #000; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; overflow: hidden; -webkit-user-select: none; user-select: none; }
         .iphone-container { width: 100%; max-width: 414px; background: #000; height: 100vh; position: relative; overflow: hidden; }
         .filter-bar { position: absolute; top: 100px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; z-index: 40; transition: opacity 0.3s; }
         .btn-filter { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 15px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(10px); }
@@ -43,10 +43,7 @@
 </div>
 
 <script>
-    // CONFIGURATION FIREBASE
-    const firebaseConfig = {
-        databaseURL: "https://presentation-c55d7-default-rtdb.firebaseio.com/"
-    };
+    const firebaseConfig = { databaseURL: "https://presentation-c55d7-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -54,7 +51,7 @@
     let currentFilter = 'TOUT';
     let allPhotosData = [];
 
-    // Écoute des données Firebase en temps réel
+    // ACTUALISATION AUTOMATIQUE (Temps Réel)
     db.ref('galeriePhotos').on('value', (snapshot) => {
         const data = snapshot.val();
         allPhotosData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
