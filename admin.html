@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Photo - Firebase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { --primary: #6c5ce7; --primary-light: #f0eeff; --bg: #f8f9fd; --text-dark: #2d3436; --text-gray: #636e72; --white: #ffffff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text-dark); display: flex; }
+        .sidebar { width: 260px; background: var(--white); height: 100vh; position: fixed; padding: 30px 0; border-right: 1px solid #edf2f7; }
+        .brand { padding: 0 30px; margin-bottom: 40px; }
+        .brand h2 { color: var(--primary); font-size: 1.4rem; }
+        .menu-item { padding: 15px 30px; display: flex; align-items: center; text-decoration: none; color: var(--text-gray); font-weight: 500; border-left: 4px solid transparent; gap: 12px; }
+        .menu-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); }
+        .main-content { margin-left: 260px; width: calc(100% - 260px); padding: 30px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; background: var(--white); padding: 15px 30px; border-radius: 15px; margin-bottom: 30px; }
+        .content-card { background: var(--white); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.02); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: var(--text-gray); font-size: 0.8rem; padding: 15px; border-bottom: 1px solid #eee; }
+        td { padding: 15px; font-size: 0.85rem; border-bottom: 1px solid #f9f9f9; }
+        .img-preview { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; }
+        label { display: block; margin-top: 12px; font-size: 0.8rem; font-weight: 600; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand"><h2>Photo Admin</h2><p>Firebase Edition</p></div>
+    <a href="#" class="menu-item active">📸 Mes Photos</a>
+    <a href="index.html" class="menu-item">🌐 Voir la Galerie</a>
+</div>
+
+<div class="main-content">
+    <div class="top-bar">
+        <h3>Dashboard Galerie Cloud</h3>
+        <div id="photoCount">Chargement...</div>
+    </div>
+    <div class="content-card">
+        <div class="card-header">
+            <h4>Liste des Images</h4>
+            <button class="btn-add" onclick="toggleModal(true)">+ Ajouter</button>
+        </div>
+        <table>
+            <thead>
+                <tr><th>Aperçu</th><th>Catégorie</th><th>Titre</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modalForm" class="modal">
+    <div class="modal-content">
+        <h3>Nouvelle Photo</h3>
+        <form id="photoForm">
+            <label>Catégorie</label>
+            <select id="categorie"><option value="RECITATION">RECITATION</option><option value="CHANT">CHANT</option></select>
+            <label>Titre</label><input type="text" id="titre" required>
+            <label>Image</label><input type="file" id="photoFile" accept="image/*" required>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="submit" class="btn-add" style="width:100%" id="btnSave">Enregistrer</button>
+                <button type="button" onclick="toggleModal(false)" style="background:#eee; border:none; padding:10px; border-radius:10px;">Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // CONFIGURATION FIREBASE
+    const firebaseConfig = {
+        databaseURL: "https://presentation-c55d7-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function toggleModal(show) { document.getElementById('modalForm').style.display = show ? 'flex' : 'none'; }
+
+    // Lire les données
+    db.ref('galeriePhotos').on('value', (snapshot) => {
+        const data = snapshot.val();
+        const photos = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+        document.getElementById('photoCount').innerText = photos.length + " photo(s)";
+        
+        document.getElementById('tableBody').innerHTML = photos.reverse().map(p => `
+            <tr>
+                <td><img src="${p.src}" class="img-preview"></td>
+                <td><span style="font-size:0.7rem; font-weight:700; color:#6c5ce7;">${p.categorie}</span></td>
+                <td><b>${p.titre}</b></td>
+                <td>${p.date}</td>
+                <td><button onclick="deletePhoto('${p.id}')" style="border:none; background:none; cursor:pointer;">🗑️</button></td>
+            </tr>
+        `).join('');
+    });
+
+    function deletePhoto(id) {
+        if(confirm("Supprimer ?")) db.ref('galeriePhotos/' + id).remove();
+    }
+
+    document.getElementById('photoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "Envoi..."; btn.disabled = true;
+
+        const file = document.getElementById('photoFile').files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(event) {
+            const newPhoto = {
+                categorie: document.getElementById('categorie').value,
+                titre: document.getElementById('titre').value,
+                src: event.target.result, // Note: Limité à 10Mo par nœud dans Firebase RTDB
+                date: new Date().toLocaleDateString('fr-FR')
+            };
+
+            db.ref('galeriePhotos').push(newPhoto).then(() => {
+                toggleModal(false);
+                document.getElementById('photoForm').reset();
+                btn.innerText = "Enregistrer"; btn.disabled = false;
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+</script>
+</body>
+</html>
