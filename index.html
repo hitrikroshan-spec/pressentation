@@ -11,33 +11,62 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #000; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; overflow: hidden; -webkit-user-select: none; user-select: none; }
-        .iphone-container { width: 100%; max-width: 414px; background: #000; height: 100vh; position: relative; overflow: hidden; }
-        .filter-bar { position: absolute; top: 100px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; z-index: 40; transition: opacity 0.3s; }
-        .btn-filter { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 15px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(10px); }
-        .btn-filter.active { background: #6c5ce7; border-color: #6c5ce7; }
-        .gallery-wrapper { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        
+        .iphone-container { width: 100%; max-width: 414px; background: #111; height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* Barre de contrôle supérieure */
+        .top-nav { position: absolute; top: 50px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 50; transition: opacity 0.3s; }
+        .view-switch { background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; display: flex; backdrop-filter: blur(10px); }
+        .view-switch button { background: none; border: none; color: white; padding: 5px 15px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; transition: 0.3s; }
+        .view-switch button.active { background: #6c5ce7; }
+
+        .filter-bar { display: flex; justify-content: center; gap: 8px; }
+        .btn-filter { background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 600; cursor: pointer; }
+        .btn-filter.active { background: #fff; color: #000; }
+
+        /* MODE SLIDE (Plein écran horizontal) */
+        .gallery-wrapper { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
         .gallery-wrapper::-webkit-scrollbar { display: none; }
-        .photo-slide { min-width: 100%; height: 100%; position: relative; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; background: #000; }
-        .photo-slide img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
-        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 30; background: rgba(255,255,255,0.1); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .photo-slide { min-width: 100%; height: 100%; position: relative; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; }
+        .photo-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* MODE CARTE (Grille verticale) */
+        .grid-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 150px 15px 40px; overflow-y: auto; height: 100vh; scroll-snap-type: none; }
+        .grid-mode .photo-slide { height: 220px; min-width: auto; flex-direction: column; border-radius: 15px; overflow: hidden; background: #222; }
+        .grid-mode img { height: 140px; width: 100%; object-fit: cover; }
+        .grid-mode .overlay-info { position: relative; padding: 10px; background: #222; height: 80px; }
+        .grid-mode .photo-title { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* UI Elements */
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 30; background: rgba(255,255,255,0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .btn-prev { left: 10px; } .btn-next { right: 10px; }
-        .overlay-info { position: absolute; top: 0; left: 0; right: 0; padding: 40px 20px 60px; z-index: 20; color: white; background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%); transition: opacity 0.3s ease; }
-        .photo-title { font-weight: 600; font-size: 1.2rem; }
-        .photo-date { font-size: 0.75rem; opacity: 0.8; }
-        .hide-ui .overlay-info, .hide-ui .nav-btn, .hide-ui .filter-bar { opacity: 0; pointer-events: none; }
+        
+        .overlay-info { position: absolute; top: 0; left: 0; right: 0; padding: 40px 20px; z-index: 20; color: white; background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%); }
+        .photo-title { font-weight: 600; font-size: 1.1rem; }
+        .photo-date { font-size: 0.65rem; opacity: 0.6; }
+
+        .hide-ui .top-nav, .hide-ui .nav-btn { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
 <div class="iphone-container" id="mainFrame">
-    <div class="filter-bar">
-        <button class="btn-filter active" onclick="filterGallery('TOUT', this)">TOUT</button>
-        <button class="btn-filter" onclick="filterGallery('RECITATION', this)">RECITATION</button>
-        <button class="btn-filter" onclick="filterGallery('CHANT', this)">CHANT</button>
+    <div class="top-nav">
+        <!-- Switcher de Vue -->
+        <div class="view-switch">
+            <button id="btnSlide" class="active" onclick="switchView('slide')">Diapo</button>
+            <button id="btnGrid" onclick="switchView('grid')">Cartes</button>
+        </div>
+
+        <div class="filter-bar">
+            <button class="btn-filter active" onclick="filterGallery('TOUT', this)">TOUT</button>
+            <button class="btn-filter" onclick="filterGallery('RECITATION', this)">RECITATION</button>
+            <button class="btn-filter" onclick="filterGallery('CHANT', this)">CHANT</button>
+        </div>
     </div>
 
-    <button class="nav-btn btn-prev" onclick="moveSlide(-1)">❮</button>
-    <button class="nav-btn btn-next" onclick="moveSlide(1)">❯</button>
+    <button class="nav-btn btn-prev" id="prevBtn" onclick="moveSlide(-1)">❮</button>
+    <button class="nav-btn btn-next" id="nextBtn" onclick="moveSlide(1)">❯</button>
 
     <div class="gallery-wrapper" id="galleryArea"></div>
 </div>
@@ -49,9 +78,9 @@
 
     const wrapper = document.getElementById('galleryArea');
     let currentFilter = 'TOUT';
+    let currentView = 'slide'; // 'slide' ou 'grid'
     let allPhotosData = [];
 
-    // ACTUALISATION AUTOMATIQUE (Temps Réel)
     db.ref('galeriePhotos').on('value', (snapshot) => {
         const data = snapshot.val();
         allPhotosData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
@@ -68,16 +97,40 @@
             return;
         }
 
+        // Rendu HTML
         wrapper.innerHTML = filtered.reverse().map(p => `
             <div class="photo-slide" onclick="toggleUI()">
                 <img src="${p.src}" alt="photo">
                 <div class="overlay-info">
-                    <div style="font-size:0.6rem; text-transform:uppercase; color:#6c5ce7; font-weight:bold; margin-bottom:5px;">${p.categorie}</div>
+                    <div style="font-size:0.5rem; text-transform:uppercase; color:#6c5ce7; font-weight:bold;">${p.categorie}</div>
                     <div class="photo-title">${p.titre}</div>
-                    <div class="photo-date">Ajoutée le ${p.date}</div>
+                    <div class="photo-date">${p.date}</div>
                 </div>
             </div>
         `).join('');
+
+        // Ajuster les contrôles selon la vue
+        updateViewUI();
+    }
+
+    function switchView(view) {
+        currentView = view;
+        document.getElementById('btnSlide').classList.toggle('active', view === 'slide');
+        document.getElementById('btnGrid').classList.toggle('active', view === 'grid');
+        
+        if(view === 'grid') {
+            wrapper.classList.add('grid-mode');
+        } else {
+            wrapper.classList.remove('grid-mode');
+        }
+        updateViewUI();
+    }
+
+    function updateViewUI() {
+        const isGrid = currentView === 'grid';
+        document.getElementById('prevBtn').style.display = isGrid ? 'none' : 'flex';
+        document.getElementById('nextBtn').style.display = isGrid ? 'none' : 'flex';
+        wrapper.scrollLeft = 0;
     }
 
     function filterGallery(cat, btn) {
@@ -85,7 +138,6 @@
         document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         displayGallery();
-        wrapper.scrollLeft = 0;
     }
 
     function moveSlide(direction) {
@@ -93,7 +145,9 @@
     }
 
     function toggleUI() {
-        document.getElementById('mainFrame').classList.toggle('hide-ui');
+        if(currentView === 'slide') {
+            document.getElementById('mainFrame').classList.toggle('hide-ui');
+        }
     }
 </script>
 </body>
